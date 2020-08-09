@@ -1,9 +1,9 @@
 package main
 
 import (
-	"clash-royale-telegram-bot/data"
 	"encoding/json"
 	"fmt"
+	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"net/http"
 	"net/url"
 )
