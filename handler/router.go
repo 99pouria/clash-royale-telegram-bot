@@ -1,10 +1,10 @@
 package main
 
 import (
-	"clash-royale-telegram-bot/data"
 	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"log"
 	"net/http"
 	"strconv"
