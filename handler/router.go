@@ -1,14 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"log"
-	"net/http"
 	"strconv"
+	"strings"
 )
+
+var auth string
 
 func main() {
 	bot, err := tgbotapi.NewBotAPI("1037921974:AAH7XCyAy-eVIUwTlcmLPX_WKCUD069qGzg")
@@ -29,41 +29,48 @@ func main() {
 		if update.Message == nil { // ignore any non-Message Updates
 			continue
 		}
+
+		if strings.HasPrefix(update.Message.Text, "new_authorization|") {
+			auth = string([]rune(update.Message.Text)[18:])
+			fmt.Println("new authorization sets!")
+			continue
+		}
 		tag := update.Message.Text
+
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, getPlayerStats(tag))
+
+		// Keyboard button code:
+
+		//msg.ParseMode = tgbotapi.ModeHTML
+		//keyboard := tgbotapi.NewReplyKeyboard(
+		//	tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("Kang stickers"), tgbotapi.NewKeyboardButton("Get original sticker")),
+		//	tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("Create new pack"), tgbotapi.NewKeyboardButton("List my packs")),
+		//	tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("Synchronize with Telegram Servers")),
+		//	tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("Help")))
+		//keyboard.OneTimeKeyboard = true
+		//msg.ReplyMarkup = keyboard
 
 		log.Printf("[%s] %s", update.Message.From.FirstName, update.Message.Text)
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, getPlayerStats(tag))
 		msg.ReplyToMessageID = update.Message.MessageID
-		fmt.Println(msg)
+		fmt.Println(msg.Text)
+		bot.Send(msg)
 
 	}
 }
 
 func getPlayerStats(playerTag string) string {
-	//Q2LL8LYUG
-
-	url := "https://api.clashroyale.com/v1/players/%23" + playerTag
-	req, err := http.NewRequest("GET", url, nil)
-	client := &http.Client{}
-	req.Header.Set("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjU0YWM1MGJiLTZhMjEtNDg0Mi04NTkyLWVhNGU0NDgwYWRmOSIsImlhdCI6MTU5Njk3MzcxNSwic3ViIjoiZGV2ZWxvcGVyL2E0MmNjYzI3LWIzYWItZGYxYS05YTFiLWY1YTk3ZjI0ZWFjZiIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyI1NC4xNzQuMTU1Ljk5Il0sInR5cGUiOiJjbGllbnQifV19.2pILzRxmvSs4AFVnbc8OYeKLEEQzEvUM080LHm7Ck4Gc6v8LKUEhVEjwDiPkJqh5Ot86tA6kkxBbb60MpJRmKw")
-
-	res, err := client.Do(req)
+	c := NewClient("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6ImZkYzk2ZTEzLTk1NzYtNDdjNy1hYzM0LTVlMjJkMTA3NzZlMSIsImlhdCI6MTU5NzI1NTUxNCwic3ViIjoiZGV2ZWxvcGVyL2E0MmNjYzI3LWIzYWItZGYxYS05YTFiLWY1YTk3ZjI0ZWFjZiIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyIyMy4xMDUuMTcwLjEzNCJdLCJ0eXBlIjoiY2xpZW50In1dfQ.xs9NgHlJa_3JQZQR3upYYylTjwTxIi_mqpaZ5WSR9Yp72Jl8gRGNFIXEmhxpPqUXwV_IViFxcTaBEN58E7B1Mw")
+	p, err := c.Player(playerTag)
 	if err != nil {
-		fmt.Println(err)
+		return err.Error()
 	}
-
-	fmt.Println("response status:", res.Status)
-	if err != nil {
-		fmt.Println(err)
-	} else if res.StatusCode != 200 {
-		fmt.Printf("none 200 response from [%s]\n", url)
-		return "error :("
-	}
-	p := &data.Player{}
-	if err = json.NewDecoder(res.Body).Decode(p); err != nil {
-		fmt.Println(err)
-	}
+	b, err := c.BattleLog(playerTag)
 	message := "name: " + p.Name + "\nlevel: " + strconv.FormatInt(int64(p.ExpLevel), 10)
+	message += "\nwins: " + strconv.FormatInt(int64(p.Wins), 10)
+	message += "\nlosses: " + strconv.FormatInt(int64(p.Losses), 10)
+	message += "\nrecent wins percentage: " + fmt.Sprint(b.TrophyList())
+	message += "\nrecent wins percentage: " + fmt.Sprint(b.RecentWinPercentage())
+	message += "\ntotal wins percentage: " + fmt.Sprint(p.TotalWinPercentage())
 	return message
 }

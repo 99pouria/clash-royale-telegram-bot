@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	clanURL   = "https://api.clashofclans.com/v1/clans/%s"
-	playerURL = "https://api.clashofclans.com/v1/players/%s"
+	clanURL   = "https://api.clashroyale.com/v1/clans/%s"
+	playerURL = "https://api.clashroyale.com/v1/players/%s"
 )
 
 // Client that fetches model objects from Clash of Clan's API
 type Client interface {
 	Clan(tag string) (*data.Clan, error)
 	Player(tag string) (*data.Player, error)
-	//FetchAllPlayers(clan *data.Clan) error
+	BattleLog(tag string) (*data.BattleLog, error)
 }
 
 type client struct {
@@ -31,7 +31,8 @@ func NewClient(token string) Client {
 
 func (t *client) Clan(tag string) (*data.Clan, error) {
 	clan := &data.Clan{}
-	if err := t.unmarshalURL(fmt.Sprintf(clanURL, url.PathEscape(tag)), &clan); err != nil {
+	err := t.unmarshalURL(fmt.Sprintf(clanURL, url.PathEscape(tag)), &clan)
+	if err != nil {
 		return nil, err
 	}
 	return clan, nil
@@ -39,35 +40,20 @@ func (t *client) Clan(tag string) (*data.Clan, error) {
 
 func (t *client) Player(tag string) (*data.Player, error) {
 	player := &data.Player{}
-	player.Tag = tag
-	if err := t.hydratePlayer(player); err != nil {
+	err := t.unmarshalURL(fmt.Sprintf(playerURL, url.PathEscape(tag)), player)
+	if err != nil {
 		return nil, err
 	}
 	return player, nil
 }
 
-/*func (t *client) FetchAllPlayers(clan *data.Clan) error {
-	var wg sync.WaitGroup
-	for _, member := range clan.MemberList {
-		wg.Add(1)
-		go func(player *data.Player) {
-			if err := t.hydratePlayer(player); err != nil {
-				fmt.Println(err) // What do with errors? maybe error channel...
-			}
-			wg.Done()
-		}(member)
+func (t *client) BattleLog(tag string) (*data.BattleLog, error) {
+	battleLog := &data.BattleLog{}
+	err := t.unmarshalURL(fmt.Sprintf(playerURL, url.PathEscape(tag))+"/battlelog", battleLog)
+	if err != nil {
+		return nil, err
 	}
-	wg.Wait()
-
-	return nil
-}*/
-
-func (t *client) hydratePlayer(player *data.Player) error {
-	if err := t.unmarshalURL(fmt.Sprintf(playerURL, url.PathEscape(player.Tag)), player); err != nil {
-		return err
-	}
-
-	return nil
+	return battleLog, nil
 }
 
 func (t *client) unmarshalURL(url string, v interface{}) error {
@@ -80,7 +66,6 @@ func (t *client) unmarshalURL(url string, v interface{}) error {
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", t.token))
 	r, err := client.Do(req)
 	fmt.Println("response status:", r.Status)
-	fmt.Println("request :", req.Header)
 	if err != nil {
 		return err
 	} else if r.StatusCode != 200 {
