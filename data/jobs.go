@@ -10,11 +10,14 @@ func (b *BattleLog) TrophyList() []int {
 	return a
 }
 
-func (b *BattleLog) RecentWinPercentage() float64 {
+func (b *BattleLog) RecentWinPercentage(onlyRankMatches bool) float64 {
 	wins := 0.0
 	losses := 0.0
 	draws := 0.0
 	for _, battle := range *b {
+		if onlyRankMatches && battle.Type != "PvP" {
+			continue
+		}
 		if battle.Team[0].Crowns > battle.Opponent[0].Crowns {
 			wins++
 			continue
