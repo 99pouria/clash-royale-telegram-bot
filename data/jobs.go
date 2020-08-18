@@ -1,5 +1,10 @@
 package data
 
+import (
+	"fmt"
+	"strconv"
+)
+
 func (b *BattleLog) TrophyList() []int {
 	var a []int
 	for _, battle := range *b {
@@ -34,4 +39,20 @@ func (b *BattleLog) RecentWinPercentage(onlyRankMatches bool) float64 {
 func (p *Player) TotalWinPercentage() (result float64) {
 	result = float64(p.Wins) / float64(p.Wins+p.Losses) * 100
 	return
+}
+
+func (p *Player) GetPlayerProfileInfo() string {
+	message := "name: " + p.Name + "\nking level: " + strconv.FormatInt(int64(p.ExpLevel), 10)
+	message += "\nwins: " + strconv.FormatInt(int64(p.Wins), 10)
+	message += "\nlosses: " + strconv.FormatInt(int64(p.Losses), 10)
+	message += "\ntrophies: " + strconv.FormatInt(int64(p.Trophies), 10)
+	message += "\nbest trophies: " + strconv.FormatInt(int64(p.BestTrophies), 10)
+	return message
+}
+
+func (b *BattleLog) GetPlayerStats(totalWinPercentage float64) string {
+	message := "\nrecent wins percentage: " + fmt.Sprint(b.RecentWinPercentage(false))
+	message += "\nrecent rank games wins percentage: " + fmt.Sprint(b.RecentWinPercentage(true))
+	message += "\ntotal wins percentage: " + fmt.Sprint(totalWinPercentage)
+	return message
 }

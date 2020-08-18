@@ -5,7 +5,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"log"
-	"strconv"
 	"strings"
 )
 
@@ -21,6 +20,7 @@ const (
 var Bot *tgbotapi.BotAPI
 var auth string
 var members data.MyBotMembers
+var royaleClient Client
 
 func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 	members = m
@@ -94,8 +94,8 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			}
 		case data.LogIn:
 			tag := update.Message.Text
-			c := NewClient(auth)
-			_, err := c.Player(tag)
+			royaleClient = NewClient(auth)
+			_, err := royaleClient.Player(tag)
 			if err != nil {
 				msg := tgbotapi.NewMessage(chatID, "Invalid Tag.\nMake sure the tag starts with '#'\nLike: #ABCDE")
 				msg.ParseMode = tgbotapi.ModeHTML
@@ -111,11 +111,54 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			if err != nil {
 				log.Println(err)
 			}
-			msg := CreateHomePageMessage(chatID)
+			msg := CreateHomePageMessage(chatID, -1)
 			_, _ = Bot.Send(msg)
 			continue
 		case data.HomePage:
 			if update.CallbackQuery.Data == ProfileInfoQuery {
+
+				msg := CreateProfileInfoMessage(chatID, update.CallbackQuery.Message.MessageID)
+				_ = members.ChangeState(data.ViewingProfile, chatID)
+				_, err := Bot.Send(msg)
+				if err != nil {
+					log.Println(err)
+				}
+				_, _ = Bot.AnswerCallbackQuery(tgbotapi.NewCallback(update.CallbackQuery.ID, "Done"))
+				continue
+
+			} else if update.CallbackQuery.Data == PlayerStatsQuery {
+
+				msg := CreateProfileStatsMessage(chatID, update.CallbackQuery.Message.MessageID)
+				_ = members.ChangeState(data.ViewingAccountStats, chatID)
+				_, err := Bot.Send(msg)
+				if err != nil {
+					log.Println(err)
+				}
+				_, _ = Bot.AnswerCallbackQuery(tgbotapi.NewCallback(update.CallbackQuery.ID, "Done"))
+				continue
+
+			} else if update.CallbackQuery.Data == ChangeAccountQuery {
+				lastPm := tgbotapi.NewDeleteMessage(chatID, update.CallbackQuery.Message.MessageID)
+				_, _ = Bot.DeleteMessage(lastPm)
+				msg := CreateLoginMessage(chatID)
+				err := members.ChangeState(data.LogIn, chatID)
+				if err != nil {
+					log.Println(err)
+				}
+				_, _ = Bot.Send(msg)
+				continue
+			}
+			continue
+		case data.ViewingAccountStats, data.ViewingProfile:
+			if update.CallbackQuery.Data == BackMessage {
+				msg := CreateHomePageMessage(chatID, update.CallbackQuery.Message.MessageID)
+				_ = members.ChangeState(data.HomePage, chatID)
+				_, err := Bot.Send(msg)
+				if err != nil {
+					log.Println(err)
+				}
+				_, _ = Bot.AnswerCallbackQuery(tgbotapi.NewCallback(update.CallbackQuery.ID, "Done"))
+				continue
 			}
 		}
 		if update.Message == nil || update.CallbackQuery == nil { // ignore any non-Message Updates
@@ -126,23 +169,6 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 		}
 
 	}
-}
-
-func getPlayerStats(playerTag string) string {
-	c := NewClient(auth)
-	p, err := c.Player(playerTag)
-	if err != nil {
-		return err.Error()
-	}
-	b, err := c.BattleLog(playerTag)
-	message := "name: " + p.Name + "\nking level: " + strconv.FormatInt(int64(p.ExpLevel), 10)
-	message += "\nwins: " + strconv.FormatInt(int64(p.Wins), 10)
-	message += "\nlosses: " + strconv.FormatInt(int64(p.Losses), 10)
-	message += "\nrecent wins percentage: " + fmt.Sprint(b.TrophyList())
-	message += "\nrecent wins percentage: " + fmt.Sprint(b.RecentWinPercentage(false))
-	message += "\nrecent rank games wins percentage: " + fmt.Sprint(b.RecentWinPercentage(true))
-	message += "\ntotal wins percentage: " + fmt.Sprint(p.TotalWinPercentage())
-	return message
 }
 
 func InitBot(token string) (tgbotapi.UpdatesChannel, error) {
@@ -165,73 +191,4 @@ func InitBot(token string) (tgbotapi.UpdatesChannel, error) {
 		return nil, err
 	}
 	return updates, nil
-}
-
-func CreateStartMessage(chatId int64) tgbotapi.MessageConfig {
-	msg := tgbotapi.NewMessage(chatId, "Hi!\nChoose one these options below:")
-	msg.ParseMode = tgbotapi.ModeHTML
-	aboutButton := tgbotapi.NewKeyboardButton(AboutMessage)
-	loginButton := tgbotapi.NewKeyboardButton(LogInMessage)
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(loginButton, aboutButton),
-	)
-	keyboard.OneTimeKeyboard = true
-	msg.ReplyMarkup = keyboard
-	return msg
-}
-
-func CreateAboutUsMessage(chatId int64) tgbotapi.MessageConfig {
-	msg := tgbotapi.NewMessage(chatId, "blah blah blah blah\nblah blah blah blah\n@pooria2 is creator :D")
-	msg.ParseMode = tgbotapi.ModeHTML
-	backButton := tgbotapi.NewKeyboardButton(BackMessage)
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(backButton),
-	)
-	keyboard.OneTimeKeyboard = true
-	msg.ReplyMarkup = keyboard
-	return msg
-}
-
-func CreateLoginMessage(chatId int64) tgbotapi.MessageConfig {
-	fmt.Println("tags:", members.GetTags(chatId))
-	if len(members.GetTags(chatId)) == 0 {
-		msg := tgbotapi.NewMessage(
-			chatId,
-			"Send your account tag.\nYou can copy your tag from your clash royale profile, under your username",
-		)
-		msg.ParseMode = tgbotapi.ModeHTML
-		return msg
-	}
-	var buttons [][]tgbotapi.KeyboardButton
-	for _, tag := range members.GetTags(chatId) {
-		buttons = append(buttons, tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(tag)))
-	}
-	var msg = tgbotapi.NewMessage(chatId,
-		"Choose a tag from list below or send a new tag:",
-	)
-	msg.ParseMode = tgbotapi.ModeHTML
-	keyboard := tgbotapi.NewReplyKeyboard(buttons...)
-	keyboard.OneTimeKeyboard = true
-	msg.ReplyMarkup = keyboard
-	return msg
-}
-
-func CreateHomePageMessage(chatId int64) tgbotapi.MessageConfig {
-	tag := members.GetCurrentTag(chatId)
-	c := NewClient(auth)
-	p, _ := c.Player(tag)
-	textMessage := "Dear " + members.GetUser(chatId).FirstName + "!\n" + "You are logged in as " + p.Name
-	textMessage += ". Choose one of options below to see result;"
-	textMessage += "\nAnd don't forget!! If you like this bot please share "
-	textMessage += "for your clan mates and send me your suggestions and feedback with /about_us command"
-	msg := tgbotapi.NewMessage(chatId, textMessage)
-	newButton1 := tgbotapi.NewInlineKeyboardButtonData("Profile info", ProfileInfoQuery)
-	newButton2 := tgbotapi.NewInlineKeyboardButtonData("Game data stats", PlayerStatsQuery)
-	newButton3 := tgbotapi.NewInlineKeyboardButtonData("Change Account", ChangeAccountQuery)
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(newButton1, newButton2),
-		tgbotapi.NewInlineKeyboardRow(newButton3),
-	)
-	msg.ReplyMarkup = keyboard
-	return msg
 }

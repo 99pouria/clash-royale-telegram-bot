@@ -9,7 +9,6 @@ const (
 	Start               = 0
 	LogIn               = 1
 	AboutUs             = 2
-	TagValidating       = 3
 	HomePage            = 4
 	ViewingProfile      = 5
 	ViewingAccountStats = 6
