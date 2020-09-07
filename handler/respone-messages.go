@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -31,13 +30,13 @@ func CreateAboutUsMessage(chatId int64) tgbotapi.MessageConfig {
 }
 
 func CreateLoginMessage(chatId int64) tgbotapi.MessageConfig {
-	fmt.Println("tags:", members.GetTags(chatId))
 	if len(members.GetTags(chatId)) == 0 {
 		msg := tgbotapi.NewMessage(
 			chatId,
 			"Send your account tag.\nYou can copy your tag from your clash royale profile, under your username",
 		)
 		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 		return msg
 	}
 	var buttons [][]tgbotapi.KeyboardButton
@@ -99,4 +98,10 @@ func CreateProfileStatsMessage(chatId int64, messageID int) tgbotapi.EditMessage
 	msg := tgbotapi.NewEditMessageText(chatId, messageID, b.GetPlayerStats(p.TotalWinPercentage()))
 	msg.ReplyMarkup = &keyboard
 	return msg
+}
+
+func SendLoadingMessage(chatId int64) (tgbotapi.Message, error) {
+	msg := tgbotapi.NewMessage(chatId, "Loading...")
+	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
+	return Bot.Send(msg)
 }
