@@ -1,4 +1,6 @@
-package data
+package tbotapi
+
+import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
 type Player struct {
 	Tag                   string `json:"tag"`
@@ -202,4 +204,13 @@ type BattleLog []struct {
 			} `json:"iconUrls"`
 		} `json:"cards"`
 	} `json:"opponent"`
+}
+
+type Member struct {
+	State         int
+	Tags          []string
+	CurrentTag    string
+	ChatId        int64
+	LastMessageID int
+	*tgbotapi.User
 }

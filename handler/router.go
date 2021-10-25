@@ -1,10 +1,12 @@
 package handler
 
 import (
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"log"
 	"strings"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	crapi "github.com/pooria1/clash-royale-telegram-bot/pkg/cr-api"
+	tbot "github.com/pooria1/clash-royale-telegram-bot/pkg/tbot-api"
 )
 
 const (
@@ -18,10 +20,10 @@ const (
 
 var Bot *tgbotapi.BotAPI
 var auth string
-var members data.MyBotMembers
-var royaleClient Client
+var members tbot.MyBotMembers
+var royaleClient crapi.Client
 
-func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
+func HandleMessages(updates tgbotapi.UpdatesChannel, m tbot.MyBotMembers) {
 
 	members = m
 	var chatID int64
@@ -40,7 +42,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				if err != nil {
 					log.Println(err)
 				}
-				_ = members.ChangeState(data.Start, chatID)
+				_ = members.ChangeState(tbot.Start, chatID)
 			}
 
 			if strings.HasPrefix(update.Message.Text, "new_authorization|") && update.Message.From.UserName == "Pooria2" {
@@ -54,16 +56,16 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			// Todo: when we receive GetIP message we have to send IP to Pooria
 
 			if update.Message.IsCommand() {
-				if members.GetState(chatID) == data.HomePage ||
-					members.GetState(chatID) == data.ViewingAccountStats ||
-					members.GetState(chatID) == data.ViewingProfile {
+				if members.GetState(chatID) == tbot.HomePage ||
+					members.GetState(chatID) == tbot.ViewingAccountStats ||
+					members.GetState(chatID) == tbot.ViewingProfile {
 					_, err := Bot.DeleteMessage(tgbotapi.NewDeleteMessage(chatID, members[chatID].LastMessageID))
 					if err != nil {
 						log.Println(err)
 					}
 				}
 				if update.Message.Command() == "start" {
-					err := members.ChangeState(data.Start, chatID)
+					err := members.ChangeState(tbot.Start, chatID)
 					if err != nil {
 						log.Println(err)
 					}
@@ -73,7 +75,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				}
 				if update.Message.Command() == "about_us" {
 					msg := CreateAboutUsMessage(chatID)
-					err := members.ChangeState(data.AboutUs, chatID)
+					err := members.ChangeState(tbot.AboutUs, chatID)
 					if err != nil {
 						log.Println(err)
 					}
@@ -86,10 +88,10 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 		// Todo: All of keyboards should be inline. We can't have loading msg with button keyboard.
 
 		switch members.GetState(chatID) {
-		case data.Start:
+		case tbot.Start:
 			if update.Message.Text == LogInMessage {
 				msg := CreateLoginMessage(chatID)
-				err := members.ChangeState(data.LogIn, chatID)
+				err := members.ChangeState(tbot.LogIn, chatID)
 				if err != nil {
 					log.Println(err)
 				}
@@ -98,7 +100,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				continue
 			} else if update.Message.Text == AboutMessage {
 				msg := CreateAboutUsMessage(chatID)
-				err := members.ChangeState(data.AboutUs, chatID)
+				err := members.ChangeState(tbot.AboutUs, chatID)
 				if err != nil {
 					log.Println(err)
 				}
@@ -106,22 +108,22 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				members[chatID].LastMessageID = sentMessage.MessageID
 				continue
 			}
-		case data.AboutUs:
+		case tbot.AboutUs:
 			if update.Message.Text == BackMessage {
-				_ = members.ChangeState(data.Start, chatID)
+				_ = members.ChangeState(tbot.Start, chatID)
 				msg := CreateStartMessage(chatID)
 				sentMessage, _ := Bot.Send(msg)
 				members[chatID].LastMessageID = sentMessage.MessageID
 				continue
 			}
-		case data.LogIn:
+		case tbot.LogIn:
 			m, err := SendLoadingMessage(chatID)
 			if err != nil {
 				log.Println(err)
 			}
 			members[chatID].LastMessageID = m.MessageID
 			tag := update.Message.Text
-			royaleClient = NewClient(auth)
+			royaleClient = crapi.NewClient(auth)
 			_, err = royaleClient.Player(tag)
 			if err != nil {
 				log.Println(err)
@@ -138,7 +140,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			if err != nil {
 				log.Println(err)
 			}
-			err = members.ChangeState(data.HomePage, chatID)
+			err = members.ChangeState(tbot.HomePage, chatID)
 			if err != nil {
 				log.Println(err)
 			}
@@ -151,7 +153,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			members[chatID].LastMessageID = sentMessage.MessageID
 			continue
 
-		case data.HomePage:
+		case tbot.HomePage:
 			if update.CallbackQuery == nil {
 				continue
 			}
@@ -161,7 +163,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				_, _ = Bot.Send(msg1)
 
 				msg := CreateProfileInfoMessage(chatID, update.CallbackQuery.Message.MessageID)
-				_ = members.ChangeState(data.ViewingProfile, chatID)
+				_ = members.ChangeState(tbot.ViewingProfile, chatID)
 				sentMessage, err := Bot.Send(msg)
 				if err != nil {
 					log.Println(err)
@@ -175,7 +177,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 			} else if update.CallbackQuery.Data == PlayerStatsQuery {
 
 				msg := CreateProfileStatsMessage(chatID, update.CallbackQuery.Message.MessageID)
-				_ = members.ChangeState(data.ViewingAccountStats, chatID)
+				_ = members.ChangeState(tbot.ViewingAccountStats, chatID)
 				sentMessage, err := Bot.Send(msg)
 				if err != nil {
 					log.Println(err)
@@ -190,7 +192,7 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				lastPm := tgbotapi.NewDeleteMessage(chatID, update.CallbackQuery.Message.MessageID)
 				_, _ = Bot.DeleteMessage(lastPm)
 				msg := CreateLoginMessage(chatID)
-				err := members.ChangeState(data.LogIn, chatID)
+				err := members.ChangeState(tbot.LogIn, chatID)
 				if err != nil {
 					log.Println(err)
 				}
@@ -200,13 +202,13 @@ func HandleMessages(updates tgbotapi.UpdatesChannel, m data.MyBotMembers) {
 				continue
 			}
 			continue
-		case data.ViewingAccountStats, data.ViewingProfile:
+		case tbot.ViewingAccountStats, tbot.ViewingProfile:
 			if update.CallbackQuery == nil {
 				continue
 			}
 			if update.CallbackQuery.Data == BackMessage {
 				msg := CreateHomePageMessage(chatID, update.CallbackQuery.Message.MessageID)
-				_ = members.ChangeState(data.HomePage, chatID)
+				_ = members.ChangeState(tbot.HomePage, chatID)
 				sentMessage, err := Bot.Send(msg)
 				if err != nil {
 					log.Println(err)

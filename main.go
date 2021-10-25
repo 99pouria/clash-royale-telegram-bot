@@ -1,17 +1,15 @@
 package main
 
 import (
-	"github.com/pooria1/clash-royale-telegram-bot/data"
-	"github.com/pooria1/clash-royale-telegram-bot/handler"
 	"log"
-)
 
-var members data.MyBotMembers
+	"github.com/pooria1/clash-royale-telegram-bot/handler"
+	tbotapi "github.com/pooria1/clash-royale-telegram-bot/pkg/tbot-api"
+)
 
 func main() {
 
-	members = members.Init()
-
+	members := tbotapi.Init()
 	updates, err := handler.InitBot("1037921974:AAH7XCyAy-eVIUwTlcmLPX_WKCUD069qGzg")
 
 	if err != nil {

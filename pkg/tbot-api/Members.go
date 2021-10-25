@@ -1,7 +1,8 @@
-package data
+package tbotapi
 
 import (
 	"fmt"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -16,16 +17,7 @@ const (
 
 type MyBotMembers map[int64]*Member
 
-type Member struct {
-	State         int
-	Tags          []string
-	CurrentTag    string
-	ChatId        int64
-	LastMessageID int
-	*tgbotapi.User
-}
-
-func (bm MyBotMembers) Init() MyBotMembers {
+func Init() MyBotMembers {
 	return make(map[int64]*Member)
 }
 

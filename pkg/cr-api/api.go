@@ -1,11 +1,12 @@
-package handler
+package crapi
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pooria1/clash-royale-telegram-bot/data"
 	"net/http"
 	"net/url"
+
+	tbot "github.com/pooria1/clash-royale-telegram-bot/pkg/tbot-api"
 )
 
 const (
@@ -15,9 +16,9 @@ const (
 
 // Client that fetches model objects from Clash of Clan's API
 type Client interface {
-	Clan(tag string) (*data.Clan, error)
-	Player(tag string) (*data.Player, error)
-	BattleLog(tag string) (*data.BattleLog, error)
+	Clan(tag string) (*tbot.Clan, error)
+	Player(tag string) (*tbot.Player, error)
+	BattleLog(tag string) (*tbot.BattleLog, error)
 }
 
 type client struct {
@@ -29,8 +30,8 @@ func NewClient(token string) Client {
 	return &client{token}
 }
 
-func (t *client) Clan(tag string) (*data.Clan, error) {
-	clan := &data.Clan{}
+func (t *client) Clan(tag string) (*tbot.Clan, error) {
+	clan := &tbot.Clan{}
 	err := t.unmarshalURL(fmt.Sprintf(clanURL, url.PathEscape(tag)), &clan)
 	if err != nil {
 		return nil, err
@@ -38,8 +39,8 @@ func (t *client) Clan(tag string) (*data.Clan, error) {
 	return clan, nil
 }
 
-func (t *client) Player(tag string) (*data.Player, error) {
-	player := &data.Player{}
+func (t *client) Player(tag string) (*tbot.Player, error) {
+	player := &tbot.Player{}
 	err := t.unmarshalURL(fmt.Sprintf(playerURL, url.PathEscape(tag)), player)
 	if err != nil {
 		return nil, err
@@ -47,8 +48,8 @@ func (t *client) Player(tag string) (*data.Player, error) {
 	return player, nil
 }
 
-func (t *client) BattleLog(tag string) (*data.BattleLog, error) {
-	battleLog := &data.BattleLog{}
+func (t *client) BattleLog(tag string) (*tbot.BattleLog, error) {
+	battleLog := &tbot.BattleLog{}
 	err := t.unmarshalURL(fmt.Sprintf(playerURL, url.PathEscape(tag))+"/battlelog", battleLog)
 	if err != nil {
 		return nil, err
