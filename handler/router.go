@@ -4,9 +4,9 @@ import (
 	"log"
 	"strings"
 
+	crapi "github.com/99pouria/clash-royale-telegram-bot/pkg/cr-api"
+	tbot "github.com/99pouria/clash-royale-telegram-bot/pkg/tbot-api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	crapi "github.com/pooria1/clash-royale-telegram-bot/pkg/cr-api"
-	tbot "github.com/pooria1/clash-royale-telegram-bot/pkg/tbot-api"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	tbot "github.com/pooria1/clash-royale-telegram-bot/pkg/tbot-api"
+	tbot "github.com/99pouria/clash-royale-telegram-bot/pkg/tbot-api"
 )
 
 const (
@@ -27,6 +27,7 @@ type client struct {
 
 // NewClient creates a new instance of API.
 func NewClient(token string) Client {
+
 	return &client{token}
 }
 
