@@ -58,4 +58,4 @@
 # End of https://www.toptal.com/developers/gitignore/api/go,linux,visualstudiocode
 
 # Ignore token files in config
-config/token*
+configs/token*
